@@ -4,6 +4,7 @@ var bodyParser = require('body-parser');
 var jwt = require('jsonwebtoken');
 var bcrypt = require('bcryptjs');
 var config = require('../config');
+var VerifyToken = require('./VerifyToken');
 
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
@@ -31,19 +32,12 @@ router.post('/register', function (req, res) {
         });
 });
 
-router.get('/me', function (req, res) {
-    var token = req.headers['x-access-token'];
-    if (!token) return res.status(401).send({ auth: false, message: 'No token provided' });
+router.get('/me', VerifyToken, function (req, res, next) {
+    User.findById(req.userId, { password: 0 }, function (err, user) {
+        if (err) return res.status(500).send("There was a problem finding the user.");
+        if (!user) return res.status(404).send("No user has been found");
 
-    jwt.verify(token, config.secret, function (err, decoded) {
-        if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
-
-        User.findById(decoded.id, { password: 0 }, function (err, user) {
-            if (err) return res.status(500).send("There was a problem finding the user.");
-            if (!user) return res.status(404).send("No user found");
-
-            res.status(200).send(user);
-        });
+        res.status(200).send(user);
     });
 });
 
@@ -71,6 +65,18 @@ router.post('/login', function (req, res) {
 
 router.get('/logout', function (req, res) {
     res.status(200).send({ auth: false, token: null });
+});
+
+// To add the middleware function
+/**
+ * Middleware functions are functions that have access to the
+ * request object(req), the response object(res), and the next function
+ * in the application's request-response style.
+ * The next function is a function int he Express router, which, when invoked, 
+ * executes the middleware succeeding the current middleware.
+ */
+router.use(function (user, req, res, next) {
+    res.status(200).send(user);
 });
 
 module.exports = router;
