@@ -9,8 +9,7 @@ router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
 var User = require('../user/User');
 
-router.post('/register', function (res, req) {
-
+router.post('/register', function (req, res) {
     var hashedPassword = bcrypt.hashSync(req.body.password, 8);
 
     User.create({
@@ -19,15 +18,17 @@ router.post('/register', function (res, req) {
         password: hashedPassword
     },
         function (err, user) {
-            if (err) return res.status(500).send("There was a problem registering the user.");
+            if (err) {
+                console.error(err);
+                return res.status(500).send("There was a problem registering the user.");
+            }
 
             // To create a token
-            var token = jwt.sign({ id: user._id }, config.secret, {
-                expiresIn: 86400 // expires in 24h
-            })
+            var token = jwt.sign({ id: user._id },
+                config.secret,
+                { expiresIn: 86400 })// expires in 24h
+            res.status(200).send({ auth: true, token: token });
         });
-
-    res.status(200).send({ auth: true, token: token });
 });
 
 router.get('/me', function (req, res) {
